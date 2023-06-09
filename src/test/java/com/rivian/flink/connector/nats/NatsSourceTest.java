@@ -17,21 +17,15 @@
 package com.rivian.flink.connector.nats;
 
 import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.Registration;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-import com.esotericsoftware.kryo.serializers.TimeSerializers;
 import io.nats.client.Options;
-import org.apache.flink.streaming.api.operators.TimerSerializerSnapshot;
-import org.apache.flink.types.PojoTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
-import org.objenesis.instantiator.ObjectInstantiator;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.time.Duration;
 
 /**
  * Created by Pramod Immaneni <pimmaneni@rivian.com> on 5/31/23
