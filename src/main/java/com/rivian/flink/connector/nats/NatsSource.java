@@ -16,9 +16,11 @@
 
 package com.rivian.flink.connector.nats;
 
+import com.esotericsoftware.kryo.DefaultSerializer;
 import io.nats.client.Connection;
 import io.nats.client.Message;
 import io.nats.client.Nats;
+import io.nats.client.Options;
 import io.nats.client.Subscription;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.source.RichParallelSourceFunction;
@@ -36,8 +38,9 @@ public class NatsSource extends RichParallelSourceFunction<String> {
 
   private static final Logger logger = LoggerFactory.getLogger(NatsSource.class);
 
-  @Nonnull
   String url;
+
+  OptionsConfig optionsConfig;
 
   @Nonnull
   String subject;
@@ -47,7 +50,13 @@ public class NatsSource extends RichParallelSourceFunction<String> {
 
   @Override
   public void open(Configuration parameters) throws Exception {
-    connection = Nats.connect(url);
+    if (url != null) {
+      connection = Nats.connect(url);
+    } else if (optionsConfig != null) {
+      connection = Nats.connect(optionsConfig.options);
+    } else {
+      connection = Nats.connect();
+    }
   }
 
   @Override
@@ -71,6 +80,18 @@ public class NatsSource extends RichParallelSourceFunction<String> {
     }
   }
 
+  @DefaultSerializer(OptionsSerializer.class)
+  static class OptionsConfig {
+    Options options;
+
+    public OptionsConfig() {
+    }
+
+    public OptionsConfig(Options options) {
+      this.options = options;
+    }
+  }
+
   @Nonnull
   public String getUrl() {
     return url;
@@ -78,6 +99,14 @@ public class NatsSource extends RichParallelSourceFunction<String> {
 
   public void setUrl(@Nonnull String url) {
     this.url = url;
+  }
+
+  public Options getOptions() {
+    return optionsConfig != null ? optionsConfig.options : null;
+  }
+
+  public void setOptions(Options options) {
+    optionsConfig = new OptionsConfig(options);
   }
 
   @Nonnull

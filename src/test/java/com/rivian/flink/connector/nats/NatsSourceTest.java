@@ -16,26 +16,54 @@
 
 package com.rivian.flink.connector.nats;
 
-import org.apache.flink.streaming.api.datastream.DataStream;
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.sink.PrintSinkFunction;
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.Registration;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
+import com.esotericsoftware.kryo.serializers.TimeSerializers;
+import io.nats.client.Options;
+import org.apache.flink.streaming.api.operators.TimerSerializerSnapshot;
+import org.apache.flink.types.PojoTestUtils;
+import org.junit.Assert;
+import org.junit.Test;
+import org.objenesis.instantiator.ObjectInstantiator;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.time.Duration;
 
 /**
  * Created by Pramod Immaneni <pimmaneni@rivian.com> on 5/31/23
  */
 public class NatsSourceTest {
 
-  public static void main(String[] args) throws Exception {
-    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+  @Test
+  public void testOptionsSerializationWithKryo() throws IOException {
+    Kryo kryo = new Kryo();
 
-    NatsSource source = new NatsSource();
-    source.setUrl("localhost:4222");
-    source.setSubject("test.subject");
-    DataStream<String> stream = env.addSource(source);
+    /*
+    Registration registration = kryo.register(Options.class);
+    registration.setInstantiator(new ObjectInstantiator<Options>() {
+      @Override
+      public Options newInstance() {
+        return Options.builder().build();
+      }
+    });
+    */
 
-    PrintSinkFunction<String> sink = new PrintSinkFunction<>();
-    stream.addSink(sink);
+    Options options = Options.builder().server("localhost:5000").build();
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    Output output = new Output(baos);
+    kryo.writeObject(output, new NatsSource.OptionsConfig(options));
+    output.close();
 
-    env.execute("NatsSourceTest");
+    Input input = new Input(new ByteArrayInputStream(baos.toByteArray()));
+    Options roptions = kryo.readObject(input, NatsSource.OptionsConfig.class).options;
+    input.close();
+    Assert.assertNotNull(roptions);
+    Assert.assertEquals("Number of servers", 1, roptions.getUnprocessedServers().size());
+    Assert.assertEquals("Server", "localhost:5000", roptions.getUnprocessedServers().get(0));
   }
+
 }
